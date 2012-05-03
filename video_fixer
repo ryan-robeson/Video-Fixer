@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import subprocess
+import re
+
+valid_devices = [ 'iPhone' ]
+
+device_map = {
+  'iPhone': 
+    {
+      'name': 'iPhone 4',
+      'extension': 'mp4'
+    }
+}
+
+def bname(path):
+  return os.path.splitext(os.path.basename(path))[0]
+
+def a_file(f):
+  if not os.path.isfile(f):
+    msg = "%r is not a valid file" % f
+    raise argparse.ArgumentTypeError(msg)
+  return f
+
+def a_directory(d):
+  d = os.path.abspath(d)
+  if not os.path.isdir(d):
+    msg = "%r is not a valid directory" % d
+    raise argparse.ArgumentTypeError(msg)
+  return d
+
+def convert(args):
+  output_directory = args.output
+
+  device = device_map[args.device]
+
+  preset_name = device['name']
+
+  basename = bname(args.input)
+
+  new_name = "%s.%s" % (basename, device['extension'])
+  new_name = os.path.join(output_directory, new_name)
+
+  command = [ "HandBrakeCLI", "-i", args.input, "-o", new_name, "--preset=\"" + preset_name + "\"" ]
+
+  subprocess.call(command)
+
+parser = argparse.ArgumentParser(prog='video_fixer', description='Common fixes for videos')
+
+subparsers = parser.add_subparsers(help='sub-command help')
+
+parser_rotate = subparsers.add_parser('rotate', help='rotate help')
+
+parser_convert = subparsers.add_parser('convert', help='convert help')
+parser_convert.add_argument('--device', '-d', '--for', type=str, choices=valid_devices, help='The name of the device to convert the video for', required=True)
+parser_convert.add_argument('--input', '-i', type=a_file, help="The input file", required=True)
+parser_convert.add_argument('--output', '-o', type=a_directory, help="The output directory", required=True)
+parser_convert.set_defaults(func=convert)
+
+if __name__ == '__main__':
+  args = parser.parse_args()
+  args.func(args)
