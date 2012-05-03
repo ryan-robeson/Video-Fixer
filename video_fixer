@@ -5,18 +5,42 @@ import os
 import subprocess
 import re
 
+valid_directions = [ 'left', 'right', 'vertical', 'horizontal' ]
+
+direction_map = {
+  'left':
+  [
+    '-vf', 'transpose=2' 
+  ],
+  'right':
+  [
+    '-vf', 'transpose=1'
+  ],
+  'vertical':
+  [
+    '-vf', 'vflip'
+  ],
+  'horizontal':
+  [
+    '-vf', 'hflip'
+  ]
+}
+
 valid_devices = [ 'iPhone' ]
 
 device_map = {
   'iPhone': 
-    {
-      'name': 'iPhone 4',
-      'extension': 'mp4'
-    }
+  {
+    'name': 'iPhone 4',
+    'extension': 'mp4'
+  }
 }
 
 def bname(path):
   return os.path.splitext(os.path.basename(path))[0]
+
+def after_bname(path):
+  return os.path.splitext(os.path.basename(path))[1:]
 
 def a_file(f):
   if not os.path.isfile(f):
@@ -30,6 +54,18 @@ def a_directory(d):
     msg = "%r is not a valid directory" % d
     raise argparse.ArgumentTypeError(msg)
   return d
+
+def rotate(args):
+  output_directory = os.path.dirname(args.input)
+
+  vf_arg = direction_map[args.direction][1]
+
+  new_name = "%s_rotated%s" % (bname(args.input), "".join(after_bname(args.input)))
+  new_name = os.path.join(output_directory, new_name)
+
+  command = [ "ffmpeg", "-i", args.input, "-vf", vf_arg, new_name ]
+
+  subprocess.call(command)
 
 def convert(args):
   output_directory = args.output
@@ -52,6 +88,9 @@ parser = argparse.ArgumentParser(prog='video_fixer', description='Common fixes f
 subparsers = parser.add_subparsers(help='sub-command help')
 
 parser_rotate = subparsers.add_parser('rotate', help='rotate help')
+parser_rotate.add_argument('input', type=a_file, help="The input file")
+parser_rotate.add_argument('direction', choices=valid_directions, help="left - 90 degrees counterclockwise, right - 90 degrees clockwise, vertical - Flip vertically, horizontal - Flip horizontally")
+parser_rotate.set_defaults(func=rotate)
 
 parser_convert = subparsers.add_parser('convert', help='convert help')
 parser_convert.add_argument('--device', '-d', '--for', type=str, choices=valid_devices, help='The name of the device to convert the video for', required=True)
